@@ -1,0 +1,62 @@
+### Week 4 tests (REST Client). Prerequisites: run db/migrations/004_maruf_week4.sql if your DB was created before Week 4.
+### Make 2 users by hand-approving them in SQL (see README): one approved PROVIDER, one verified STUDENT.
+@host = http://localhost:4000
+
+### Provider login
+# @name provider
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "provider@metrouni.edu.bd", "password": "StrongPass123" }
+
+### Provider: Service ON
+PATCH {{host}}/api/offers/service
+Authorization: Bearer {{provider.response.body.token}}
+Content-Type: application/json
+
+{ "on": true }
+
+### Provider: publish offer
+POST {{host}}/api/offers
+Authorization: Bearer {{provider.response.body.token}}
+Content-Type: application/json
+
+{
+  "origin_name": "Dhanmondi", "destination_name": "Uttara",
+  "route": { "type": "LineString", "coordinates": [[90.3742,23.7461],[90.3900,23.7800],[90.3990,23.8759]] },
+  "departure_at": "2026-12-01T08:00:00+06:00", "window_minutes": 15, "fare_bdt": 100
+}
+
+### Provider: share current location (must be >= 1 km by road from the student pickup)
+POST {{host}}/api/rides/provider-location
+Authorization: Bearer {{provider.response.body.token}}
+Content-Type: application/json
+
+{ "lon": 90.4100, "lat": 23.7300 }
+
+### Student login
+# @name student
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "student@metrouni.edu.bd", "password": "StrongPass123" }
+
+### Student search: whole route inside provider route -> should MATCH (needs internet for OSRM)
+POST {{host}}/api/rides/search
+Authorization: Bearer {{student.response.body.token}}
+Content-Type: application/json
+
+{
+  "route": { "type": "LineString", "coordinates": [[90.3742,23.7461],[90.3900,23.7800],[90.3990,23.8759]] },
+  "depart_after": "2026-12-01T06:00:00+06:00", "depart_before": "2026-12-01T10:00:00+06:00"
+}
+
+### Student search: route leaves provider route -> NO match (AT-07)
+POST {{host}}/api/rides/search
+Authorization: Bearer {{student.response.body.token}}
+Content-Type: application/json
+
+{
+  "route": { "type": "LineString", "coordinates": [[90.3742,23.7461],[90.4200,23.7000]] },
+  "depart_after": "2026-12-01T06:00:00+06:00", "depart_before": "2026-12-01T10:00:00+06:00"
+}
