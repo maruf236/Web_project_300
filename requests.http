@@ -1,0 +1,58 @@
+### Install the "REST Client" extension, then click "Send Request" above each block.
+@host = http://localhost:4000
+
+### 1. Health check (should return {"ok": true})
+GET {{host}}/health
+
+### 2. Register a student (check the terminal for the printed email token)
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{
+  "category": "student",
+  "full_name": "Test Student",
+  "email": "test@metrouni.edu.bd",
+  "phone": "01712345678",
+  "password": "StrongPass123",
+  "consent": true
+}
+
+### 3. Verify email (paste the 64-character token from the terminal)
+POST {{host}}/api/auth/verify-email
+Content-Type: application/json
+
+{ "token": "PASTE_TOKEN_HERE" }
+
+### 4. Login (copy the token from the response)
+# @name login
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "test@metrouni.edu.bd", "password": "StrongPass123" }
+
+### 5. Who am I
+GET {{host}}/api/auth/me
+Authorization: Bearer {{login.response.body.token}}
+
+### 6. Send phone OTP (the 6-digit code is printed in the terminal)
+POST {{host}}/api/auth/otp/send
+Authorization: Bearer {{login.response.body.token}}
+
+### 7. Verify OTP
+POST {{host}}/api/auth/otp/verify
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{ "code": "123456" }
+
+### 8. Publish offer (expected 403 until the user is an approved provider: AT-03 behaviour)
+POST {{host}}/api/offers
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+  "origin_name": "Dhanmondi", "destination_name": "Uttara",
+  "route": { "type": "LineString", "coordinates": [[90.3742,23.7461],[90.3900,23.7800],[90.3990,23.8759]] },
+  "departure_at": "2026-12-01T08:00:00+06:00",
+  "window_minutes": 15, "fare_bdt": 100
+}
