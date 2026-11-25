@@ -1,0 +1,55 @@
+### Week 5 tests (REST Client). Prerequisites: migrations 004 and 005 loaded; Week 4 test data exists
+### (approved provider with Service ON + a published offer; verified student). Copy the offer id from "Provider: my offers".
+@host = http://localhost:4000
+@offerId = PASTE_OFFER_ID_HERE
+
+### Provider login
+# @name provider
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "provider@metrouni.edu.bd", "password": "StrongPass123" }
+
+### Provider: my offers (copy an id)
+GET {{host}}/api/offers/mine
+Authorization: Bearer {{provider.response.body.token}}
+
+### Student login
+# @name student
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "student@metrouni.edu.bd", "password": "StrongPass123" }
+
+### 1. Preview (no seat taken)
+POST {{host}}/api/bookings/preview
+Authorization: Bearer {{student.response.body.token}}
+Content-Type: application/json
+
+{ "offer_id": "{{offerId}}",
+  "route": { "type": "LineString", "coordinates": [[90.3742,23.7461],[90.3900,23.7800],[90.3990,23.8759]] } }
+
+### 2. Book (201). Sending it again with the SAME key returns the same booking (200), not a second one.
+# @name booking
+POST {{host}}/api/bookings
+Authorization: Bearer {{student.response.body.token}}
+Idempotency-Key: my-first-booking-001
+Content-Type: application/json
+
+{ "offer_id": "{{offerId}}",
+  "route": { "type": "LineString", "coordinates": [[90.3742,23.7461],[90.3900,23.7800],[90.3990,23.8759]] } }
+
+### 3. My bookings
+GET {{host}}/api/bookings/mine
+Authorization: Bearer {{student.response.body.token}}
+
+### 4. Provider sees it too
+GET {{host}}/api/bookings/mine
+Authorization: Bearer {{provider.response.body.token}}
+
+### 5. Cancel (student). Seat becomes available again.
+PATCH {{host}}/api/bookings/{{booking.response.body.booking.id}}/cancel
+Authorization: Bearer {{student.response.body.token}}
+Content-Type: application/json
+
+{ "reason": "Class timing changed" }
